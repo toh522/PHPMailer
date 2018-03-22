@@ -1,0 +1,89 @@
+<?php
+//Import the PHPMailer class into the global namespace
+//use PHPMailer\PHPMailer\PHPMailer;
+error_reporting(E_STRICT | E_ALL);
+//date_default_timezone_set('Etc/UTC');
+date_default_timezone_set('Singapore');
+use classes\business\UserManager; // directory for classes for enquiry to user database
+use classes\business\Validation;// directory for vadidation for form 
+use classes\util\DBUtil;//directory for conn to database 
+use classes\entity\User;// define all the entity for all the user
+//require '../vendor/autoload.php';
+require_once 'includes/autoload.php';
+require_once('class.phpmailer.php');
+require_once "class.smtp.php";
+$mail = new PHPMailer();
+$body = file_get_contents('contents.html');
+$mail->isSMTP();
+$mail->SMTPAuth   = true;                  // enable SMTP authentication
+$mail->IsHTML(true);
+$mail->SMTPSecure = "ssl";                 // sets the prefix to the servier
+$mail->Host = "smtp.gmail.com";      // sets GMAIL as the SMTP server smtp.gmail.com 
+$mail->SMTPAuth = true;
+$mail->SMTPKeepAlive = true; // SMTP connection will not close after each email sent, reduces SMTP overhead
+$mail->Port = 465; 
+$mail->Username = "abcportal12345@gmail.com";   // GMAIL username
+$mail->Password   = "abcportal";  // GMAIL password
+$mail->SetFrom('abcportal12345@gmail.com', 'ABC Jobs Pte Ltd');
+$mail->addReplyTo('admin@abcjobportal.com', 'List manager');
+$mail->Subject = "PHPMailer Simple database mailing list test";
+
+
+
+
+
+//Same body for all messages, so set this before the sending loop
+//If you generate a different body for each recipient (e.g. you're using a templating system),
+//set it inside the loop
+$mail->msgHTML($body);
+//msgHTML also sets AltBody, but if you want a custom one, set it afterwards
+$mail->AltBody = 'To view the message, please use an HTML compatible email viewer!';
+//Connect to the database and select the recipients from your mailing list that have not yet been sent to
+
+//You'll need to alter this to match your database
+
+$mysql = mysqli_connect('localhost', 'root', 'test123'); 
+
+//specify the directory as local host , username as root and password as test123
+
+mysqli_select_db($mysql, 'phpcrudsample'); //select the database to choose
+
+//$result = mysqli_query($mysql, 'SELECT firstname, lastnamme, email FROM tb_user WHERE sent = FALSE');
+
+//$result = mysqli_query($mysql, 'SELECT * FROM tb_user WHERE sent = FALSE');
+
+$userManager = new UserManager();
+$users = $userManager->getAllUsers();
+
+//updates and changes from here
+foreach ($users as $key => $user) {
+	
+	if(!empty($user)){
+		$mail->addAddress($user->email, $user->firstName);
+		if (!empty($user->lastName)) {
+		   $mail->addStringAttachment($user->lastName, 'lastname'); 
+		}
+		
+		$result = $mail->send();
+		
+		if (!$result) {
+			echo "Mailer Error (" . str_replace("@", "&#64;", $$user->email) . ') ' . $mail->ErrorInfo . '<br />';
+			break; //Abandon sending
+		} else {
+			echo "Message sent to :" . $user->firstName . ' (' . str_replace("@", "&#64;", $user->lastName) . ')<br />';
+			//Mark it as sent in the DB
+			//mysqli_query(
+			//    $mysql,
+			//    "UPDATE mailinglist SET sent = TRUE WHERE email = '" .
+			//    mysqli_real_escape_string($mysql, $row['email']) . "'"
+			//);
+		}
+		// Clear all addresses and attachments for next loop
+		$mail->clearAddresses();
+		$mail->clearAttachments();
+	}
+	
+	
+	
+}
+?>
